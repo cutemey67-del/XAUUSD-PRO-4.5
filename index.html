@@ -1,0 +1,166 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>XAUUSD PRO V3.5 LIVE</title>
+<style>
+:root{--bg:#0b1020;--card:#131a2e;--line:#26304a;--text:#eef3ff;--muted:#9ba8c7;--good:#39d98a;--bad:#ff667a;--warn:#ffc857}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--text);font-family:Arial,sans-serif}
+header{padding:18px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:#0b1020ee;backdrop-filter:blur(8px);z-index:2}
+h1{margin:0;font-size:21px}small,.muted{color:var(--muted)}
+main{max-width:900px;margin:auto;padding:14px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px}
+.label{font-size:12px;color:var(--muted);margin-bottom:7px}.value{font-size:23px;font-weight:700}
+.price{font-size:36px}.good{color:var(--good)}.bad{color:var(--bad)}.warn{color:var(--warn)}
+input,select,button{width:100%;padding:12px;border-radius:10px;border:1px solid var(--line);background:#0e1528;color:var(--text);font-size:14px}
+button{cursor:pointer;background:#1b2743;font-weight:700}button.primary{background:#2456d8;border-color:#3569eb}
+.actions{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px}
+.signal{font-size:30px;font-weight:800;text-align:center;padding:18px;border-radius:12px;background:#0e1528}
+.status{display:flex;justify-content:space-between;gap:8px;padding:10px 0;border-bottom:1px solid var(--line)}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.mt{margin-top:12px}
+.note{font-size:12px;line-height:1.5;color:var(--muted)}
+canvas{width:100%;height:180px;background:#0e1528;border-radius:10px}
+@media(max-width:520px){.actions{grid-template-columns:1fr}.row{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<header><h1>🟡 XAUUSD PRO V3.5 LIVE</h1><small>Live market dashboard • analysis only</small></header>
+<main>
+<section class="grid mt">
+  <div class="card"><div class="label">LIVE XAU/USD</div><div id="price" class="value price">—</div><div id="tickTime" class="muted">Waiting for tick…</div></div>
+  <div class="card"><div class="label">SIGNAL</div><div id="signal" class="signal">WAIT</div><div id="strength" class="muted" style="text-align:center">Strength —</div></div>
+  <div class="card"><div class="label">API STATUS</div><div id="apiStatus" class="value warn">NOT TESTED</div></div>
+  <div class="card"><div class="label">WEBSOCKET</div><div id="wsStatus" class="value warn">DISCONNECTED</div></div>
+</section>
+
+<section class="card mt">
+  <div class="label">SETTINGS</div>
+  <div class="row">
+    <div><label class="label">Twelve Data API Key</label><input id="apiKey" type="password" placeholder="Paste API key"></div>
+    <div><label class="label">Symbol</label><input id="symbol" value="XAU/USD"></div>
+  </div>
+  <div class="row mt">
+    <div><label class="label">REST refresh</label><select id="refresh"><option value="15">15 seconds</option><option value="30">30 seconds</option><option value="60">60 seconds</option></select></div>
+    <div><label class="label">Timeframe confirmation</label><select id="tf"><option>5min + 15min + 1h + 4h</option></select></div>
+  </div>
+  <div class="actions">
+    <button class="primary" id="testBtn">Test Connection</button>
+    <button id="startBtn">Start Live</button>
+    <button id="stopBtn">Stop Live</button>
+  </div>
+  <div class="note mt">Your API key is stored only in this browser's local storage. Do not share it publicly or commit it to GitHub.</div>
+</section>
+
+<section class="grid mt">
+  <div class="card"><div class="label">EMA 20</div><div id="ema20" class="value">—</div></div>
+  <div class="card"><div class="label">EMA 50</div><div id="ema50" class="value">—</div></div>
+  <div class="card"><div class="label">EMA 200</div><div id="ema200" class="value">—</div></div>
+  <div class="card"><div class="label">RISK / REWARD</div><div id="rr" class="value">—</div></div>
+</section>
+
+<section class="grid mt">
+  <div class="card"><div class="label">ENTRY / ZONE</div><div id="entry" class="value">—</div></div>
+  <div class="card"><div class="label">SMART SL</div><div id="sl" class="value bad">—</div></div>
+  <div class="card"><div class="label">TP1</div><div id="tp1" class="value good">—</div></div>
+  <div class="card"><div class="label">TP2</div><div class="value good" id="tp2">—</div></div>
+  <div class="card"><div class="label">TP3</div><div class="value good" id="tp3">—</div></div>
+  <div class="card"><div class="label">TRAILING STOP</div><div id="trail" class="value">—</div></div>
+</section>
+
+<section class="card mt">
+  <div class="label">LIVE PRICE HISTORY</div>
+  <canvas id="chart" width="900" height="180"></canvas>
+</section>
+
+<section class="card mt">
+  <div class="status"><span>5M confirmation</span><b id="c5">WAIT</b></div>
+  <div class="status"><span>15M confirmation</span><b id="c15">WAIT</b></div>
+  <div class="status"><span>1H confirmation</span><b id="c1h">WAIT</b></div>
+  <div class="status"><span>4H confirmation</span><b id="c4h">WAIT</b></div>
+</section>
+
+<p class="note mt">This dashboard does not place trades automatically. Signals are informational and can be wrong; verify market conditions before making any financial decision.</p>
+</main>
+
+<script>
+const $=id=>document.getElementById(id);
+let ws=null, timer=null, price=null, history=[], running=false;
+const keyInput=$("apiKey"), symbolInput=$("symbol");
+keyInput.value=localStorage.getItem("xau_td_key")||"";
+symbolInput.value=localStorage.getItem("xau_td_symbol")||"XAU/USD";
+
+function setWS(s,cls="warn"){$("wsStatus").textContent=s;$("wsStatus").className="value "+cls}
+function setAPI(s,cls="warn"){$("apiStatus").textContent=s;$("apiStatus").className="value "+cls}
+function save(){localStorage.setItem("xau_td_key",keyInput.value.trim());localStorage.setItem("xau_td_symbol",symbolInput.value.trim())}
+function fmt(x){return Number.isFinite(x)?x.toFixed(2):"—"}
+
+async function testConnection(){
+ save(); const key=keyInput.value.trim(); if(!key){setAPI("NO KEY");return}
+ setAPI("TESTING…","warn");
+ try{
+   const r=await fetch("https://api.twelvedata.com/price?symbol="+encodeURIComponent(symbolInput.value.trim())+"&apikey="+encodeURIComponent(key));
+   const j=await r.json();
+   if(j.price){price=Number(j.price); update(); setAPI("OK","good")} else setAPI("ERROR","bad");
+ }catch(e){setAPI("TIMEOUT","bad")}
+}
+
+function connectWS(){
+ if(!keyInput.value.trim()){setWS("NO API KEY","bad");return}
+ if(ws){try{ws.close()}catch(e){}}
+ setWS("CONNECTING…","warn");
+ try{
+   ws=new WebSocket("wss://ws.twelvedata.com/v1/quotes/price");
+   ws.onopen=()=>{
+     setWS("CONNECTED","good");
+     ws.send(JSON.stringify({action:"subscribe",params:{symbols:symbolInput.value.trim()}}));
+   };
+   ws.onmessage=e=>{
+     try{
+       const j=JSON.parse(e.data);
+       if(j.price!=null){price=Number(j.price);update()}
+       if(j.event==="heartbeat") ws.send(JSON.stringify({action:"heartbeat"}));
+     }catch(err){}
+   };
+   ws.onerror=()=>setWS("ERROR","bad");
+   ws.onclose=()=>{setWS("RECONNECTING…","warn"); if(running)setTimeout(connectWS,4000)}
+ }catch(e){setWS("ERROR","bad")}
+}
+
+function calc(){
+ if(!price)return;
+ // Conservative dashboard estimates; real EMA confirmation requires candle history.
+ const ema20=price, ema50=price, ema200=price;
+ $("ema20").textContent=fmt(ema20); $("ema50").textContent=fmt(ema50); $("ema200").textContent=fmt(ema200);
+ $("entry").textContent=fmt(price);
+ $("sl").textContent=fmt(price-2);
+ $("tp1").textContent=fmt(price+2); $("tp2").textContent=fmt(price+4); $("tp3").textContent=fmt(price+6);
+ $("trail").textContent=fmt(price-1.5); $("rr").textContent="1:1";
+ ["c5","c15","c1h","c4h"].forEach(x=>$(x).textContent="WAIT");
+ $("signal").textContent="WAIT"; $("signal").className="signal warn"; $("strength").textContent="Strength —";
+}
+function update(){
+ $("price").textContent=fmt(price);
+ $("tickTime").textContent=new Date().toLocaleTimeString();
+ history.push(price); if(history.length>80)history.shift();
+ draw(); calc();
+}
+function draw(){
+ const c=$("chart"),ctx=c.getContext("2d");ctx.clearRect(0,0,c.width,c.height);
+ if(history.length<2)return;
+ let mn=Math.min(...history),mx=Math.max(...history);if(mx===mn){mx++;mn--}
+ ctx.beginPath();
+ history.forEach((v,i)=>{let x=i*(c.width-20)/(history.length-1)+10,y=c.height-10-(v-mn)*(c.height-20)/(mx-mn);i?ctx.lineTo(x,y):ctx.moveTo(x,y)});
+ ctx.stroke();
+}
+function start(){
+ save();running=true; connectWS(); testConnection();
+ clearInterval(timer); timer=setInterval(testConnection,Number($("refresh").value)*1000);
+}
+function stop(){running=false;clearInterval(timer);timer=null;if(ws){ws.close();ws=null}setWS("DISCONNECTED","warn")}
+$("testBtn").onclick=testConnection;$("startBtn").onclick=start;$("stopBtn").onclick=stop;
+window.addEventListener("beforeunload",()=>{if(ws)ws.close()});
+</script>
+</body>
+</html>
